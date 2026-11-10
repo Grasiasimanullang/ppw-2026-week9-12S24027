@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: SIPUS-Del Library RESTful Web API
+  version: 1.0.0
+  description: >
+    Kontrak layanan REST API SIPUS-Del (Minggu 9 PPW). Menggunakan Sanctum
+    Bearer Token, HATEOAS (_links), dan galat RFC 7807 (application/problem+json).
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Token dari POST /auth/login (data.access_token)
+  schemas:
+    BukuInput:
+      type: object
+      required: [isbn, judul, penulis, penerbit, tahun_terbit, kategori_id, stok]
+      properties:
+        isbn: { type: string, maxLength: 17, example: "978-602-0000-01-1" }
+        judul: { type: string, maxLength: 200, example: "Pemrograman Web dengan Laravel" }
+        penulis: { type: string, maxLength: 150, example: "Grasia Simanullang" }
+        penerbit: { type: string, maxLength: 100, example: "Del Press" }
+        tahun_terbit: { type: integer, example: 2026 }
+        kategori_id: { type: integer, example: 1 }
+        stok: { type: integer, minimum: 0, example: 3 }
+        sinopsis: { type: string, nullable: true, example: "Buku uji coba API." }
+    PeminjamanInput:
+      type: object
+      required: [buku_id, nim_peminjam, nama_peminjam, durasi_hari]
+      properties:
+        buku_id: { type: integer, example: 1 }
+        nim_peminjam: { type: string, maxLength: 15, example: "12S24027" }
+        nama_peminjam: { type: string, maxLength: 150, example: "Grasia Simanullang" }
+        durasi_hari: { type: integer, minimum: 1, maximum: 30, example: 7 }
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string, example: "http://localhost:8000/docs/errors/validation-failed" }
+        title: { type: string, example: "Unprocessable Content" }
+        status: { type: integer, example: 422 }
+        detail: { type: string }
+        instance: { type: string, example: "/api/v1/bukus" }
+        errors:
+          type: object
+          additionalProperties: true
+  responses:
+    Unauthorized:
+      description: Bearer Token tidak ada atau tidak valid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Resource tidak ditemukan
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Validation:
+      description: Validasi input gagal
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Conflict:
+      description: Konflik state bisnis
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+paths:
+  /auth/login:
+    post:
+      summary: Menerbitkan Bearer Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: "pustakawan@del.ac.id" }
+                password: { type: string, example: "password123" }
+      responses:
+        '200':
+          description: Login berhasil, mengembalikan data.access_token
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/Validation'
+
+  /auth/me:
+    get:
+      summary: Profil pemilik token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profil user
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      summary: Mencabut token aktif
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token dicabut
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bukus:
+    get:
+      summary: Katalog buku (search, filter, sort, paginasi)
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: kategori_id, in: query, schema: { type: integer } }
+        - { name: tersedia, in: query, schema: { type: boolean } }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [judul, penulis, isbn, stok, tahun_terbit, created_at]
+        - name: dir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+      responses:
+        '200':
+          description: Koleksi buku terpaginasi dengan meta dan _links
+    post:
+      summary: Menambah buku
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BukuInput'
+      responses:
+        '201':
+          description: Dibuat, header Location berisi URL buku baru
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/Validation'
+
+  /bukus/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Detail buku beserta kategori dan riwayat peminjaman
+      responses:
+        '200':
+          description: Detail buku
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Mengganti seluruh atribut buku (Full Replacement)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BukuInput'
+      responses:
+        '200':
+          description: Diganti penuh (sinopsis yang tidak dikirim menjadi null)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Validation'
+    patch:
+      summary: Mengubah sebagian atribut buku (Partial Update)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                stok: 0
+      responses:
+        '200':
+          description: Diperbarui sebagian
+        '400':
+          description: Payload PATCH kosong
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/Validation'
+    delete:
+      summary: Menghapus buku (ditolak jika ada peminjaman aktif)
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Dihapus, tanpa body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /bukus/{id}/referensi-eksternal:
+    get:
+      summary: Metadata buku dari OpenLibrary (REST Consumer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Metadata eksternal dari OpenLibrary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          description: OpenLibrary mengembalikan galat
+        '504':
+          description: Timeout 8 detik ke OpenLibrary
+
+  /peminjamans:
+    get:
+      summary: Daftar peminjaman
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [dipinjam, dikembalikan]
+        - { name: nim, in: query, schema: { type: string } }
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Daftar peminjaman terpaginasi
+        '400':
+          description: Nilai status tidak valid
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Mencatat peminjaman (transaksi ACID dengan lockForUpdate)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeminjamanInput'
+      responses:
+        '201':
+          description: Dibuat, header Location berisi URL peminjaman
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          description: Validasi gagal atau stok buku habis
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /peminjamans/{id}/kembalikan:
+    patch:
+      summary: Mengembalikan buku (transaksi ACID, stok +1)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Buku dikembalikan
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
