@@ -8,6 +8,8 @@ use App\Models\Buku;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 class BukuApiController extends Controller
 {
@@ -177,6 +179,73 @@ class BukuApiController extends Controller
         $buku->delete();
 
         return $this->noContentResponse();
+    }
+
+        /** GET /api/v1/bukus/{id}/referensi-eksternal */
+    public function referensiEksternal(string $id): JsonResponse
+    {
+        $buku = Buku::find($id);
+
+        if (!$buku) {
+            return $this->notFound($id);
+        }
+
+        $isbn = preg_replace('/[^0-9Xx]/', '', $buku->isbn);
+
+        try {
+            $response = Http::acceptJson()
+                ->timeout(8)
+                ->get('https://openlibrary.org/api/books', [
+                    'bibkeys' => "ISBN:{$isbn}",
+                    'format'  => 'json',
+                    'jscmd'   => 'data',
+                ]);
+        } catch (ConnectionException $e) {
+            return $this->problemResponse(
+                title: 'Gateway Timeout',
+                detail: 'Layanan eksternal OpenLibrary tidak dapat dihubungi atau melebihi batas waktu 8 detik.',
+                status: 504,
+                errorSlug: 'external-service-timeout'
+            );
+        }
+
+        if ($response->failed()) {
+            return $this->problemResponse(
+                title: 'Bad Gateway',
+                detail: 'OpenLibrary mengembalikan galat (status ' . $response->status() . ').',
+                status: 502,
+                errorSlug: 'external-service-error'
+            );
+        }
+
+        $info = $response->json("ISBN:{$isbn}");
+
+        if (empty($info)) {
+            return $this->problemResponse(
+                title: 'External Book Not Found',
+                detail: "ISBN '{$buku->isbn}' tidak ditemukan di OpenLibrary.",
+                status: 404,
+                errorSlug: 'external-book-not-found'
+            );
+        }
+
+        return $this->successResponse(
+            data: [
+                'buku_id'     => $buku->id,
+                'isbn'        => $buku->isbn,
+                'judul_lokal' => $buku->judul,
+                'sumber'      => 'openlibrary.org',
+                'metadata'    => [
+                    'judul'            => $info['title'] ?? null,
+                    'penulis'          => collect($info['authors'] ?? [])->pluck('name')->all(),
+                    'penerbit'         => collect($info['publishers'] ?? [])->pluck('name')->all(),
+                    'jumlah_halaman'   => $info['number_of_pages'] ?? null,
+                    'tanggal_terbit'   => $info['publish_date'] ?? null,
+                    'tautan_pratinjau' => $info['url'] ?? null,
+                ],
+            ],
+            message: 'Metadata eksternal berhasil diambil dari OpenLibrary.'
+        );
     }
 
     private function notFound(string $id): JsonResponse

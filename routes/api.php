@@ -11,6 +11,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthTokenController::class, 'login']);
     Route::get('/bukus', [BukuApiController::class, 'index']);
     Route::get('/bukus/{id}', [BukuApiController::class, 'show']);
+    Route::get('/bukus/{id}/referensi-eksternal', [BukuApiController::class, 'referensiEksternal']);
 
     // Terproteksi Bearer Token
     Route::middleware('auth:sanctum')->group(function () {
