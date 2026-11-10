@@ -1,8 +1,16 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\V1\AuthTokenController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::prefix('v1')->group(function () {
+
+    // Publik
+    Route::post('/auth/login', [AuthTokenController::class, 'login']);
+
+    // Terproteksi Bearer Token
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/auth/me', [AuthTokenController::class, 'me']);
+        Route::post('/auth/logout', [AuthTokenController::class, 'logout']);
+    });
+});
