@@ -1,0 +1,479 @@
+{
+  "info": {
+    "_postman_id": "sipus-del-week9-12s24027",
+    "name": "SIPUS-DEL API v1 - Grasia Gayatri Simanullang (12S24027)",
+    "description": "Koleksi Postman untuk pengujian lengkap RESTful API & SOAP SIPUS-Del (Minggu 9 PPW).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. SOAP - Cek Bebas Pustaka (Valid)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "text/xml; charset=utf-8"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:m=\"http://sipus.del.ac.id/soap\">\n    <soap:Body>\n        <m:CheckClearanceStatusRequest>\n            <m:nim_peminjam>12S24027</m:nim_peminjam>\n        </m:CheckClearanceStatusRequest>\n    </soap:Body>\n</soap:Envelope>"
+        },
+        "url": {
+          "raw": "http://localhost:8000/soap/sipus",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "soap",
+            "sipus"
+          ]
+        }
+      }
+    },
+    {
+      "name": "02. SOAP - Cek Bebas Pustaka (Fault - NIM Kosong)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "text/xml; charset=utf-8"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"\n               xmlns:m=\"http://sipus.del.ac.id/soap\">\n    <soap:Body>\n        <m:CheckClearanceStatusRequest>\n            <m:nim_peminjam></m:nim_peminjam>\n        </m:CheckClearanceStatusRequest>\n    </soap:Body>\n</soap:Envelope>"
+        },
+        "url": {
+          "raw": "http://localhost:8000/soap/sipus",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8000",
+          "path": [
+            "soap",
+            "sipus"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03. Auth - Login Pustakawan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"pustakawan@del.ac.id\",\n    \"password\": \"password123\",\n    \"device_name\": \"postman-grasia\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04. Auth - Profil Pemilik Token (GET /auth/me)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/auth/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05. Auth - Logout Revoke Token",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/auth/logout",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "logout"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06. Buku - Daftar Katalog (GET Terpaginasi & HATEOAS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/bukus?per_page=5&tersedia=1&sort=stok&dir=desc",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus"
+          ],
+          "query": [
+            {
+              "key": "per_page",
+              "value": "5"
+            },
+            {
+              "key": "tersedia",
+              "value": "1"
+            },
+            {
+              "key": "sort",
+              "value": "stok"
+            },
+            {
+              "key": "dir",
+              "value": "desc"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "07. Buku - Detail Buku (GET /bukus/{id})",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/bukus/1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "08. Buku - Tambah Buku Baru (POST 201 Created)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"isbn\": \"978-602-0000-01-1\",\n    \"judul\": \"Pemrograman Web Modern dengan Laravel 11\",\n    \"penulis\": \"Grasia Gayatri Simanullang\",\n    \"penerbit\": \"Del Press\",\n    \"tahun_terbit\": 2026,\n    \"kategori_id\": 1,\n    \"stok\": 3,\n    \"sinopsis\": \"Buku panduan lengkap REST API Laravel 11.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/bukus",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus"
+          ]
+        }
+      }
+    },
+    {
+      "name": "09. Buku - Ganti Penuh (PUT /bukus/{id})",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"isbn\": \"978-602-0000-01-1\",\n    \"judul\": \"Pemrograman Web Modern Revisi\",\n    \"penulis\": \"Grasia Gayatri Simanullang\",\n    \"penerbit\": \"Del Press\",\n    \"tahun_terbit\": 2026,\n    \"kategori_id\": 1,\n    \"stok\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/bukus/1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Buku - Ubah Sebagian (PATCH /bukus/{id})",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"stok\": 10\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/bukus/1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "11. Buku - Referensi Eksternal (GET /bukus/{id}/referensi-eksternal)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/bukus/1/referensi-eksternal",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus",
+            "1",
+            "referensi-eksternal"
+          ]
+        }
+      }
+    },
+    {
+      "name": "12. Peminjaman - Catat Peminjaman ACID (POST /peminjamans)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"buku_id\": 1,\n    \"nim_peminjam\": \"12S24027\",\n    \"nama_peminjam\": \"Grasia Gayatri Simanullang\",\n    \"durasi_hari\": 7\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/peminjamans",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "peminjamans"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13. Peminjaman - Pengembalian Buku ACID (PATCH /kembalikan)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/peminjamans/1/kembalikan",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "peminjamans",
+            "1",
+            "kembalikan"
+          ]
+        }
+      }
+    },
+    {
+      "name": "14. Buku - Hapus Buku (DELETE /bukus/{id})",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/bukus/1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "bukus",
+            "1"
+          ]
+        }
+      }
+    }
+  ]
+}
